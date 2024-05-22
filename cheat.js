@@ -51,9 +51,9 @@ const safetySettings = [
 app.use(bodyParser.json());
 
 // POST route
-app.post("/generate", async (req, res) => {
+app.get("/generate", async (req, res) => {
   try {
-    const { query } = req.body;
+    const query = req.query.query;
 
     // Start chat session
     const chatSession = model.startChat({
