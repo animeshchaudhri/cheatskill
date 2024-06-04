@@ -11,74 +11,49 @@ const port = 3000;
 
 // Initialize Generative AI
 const apiKey = "AIzaSyAkCiAV3PE4cXdcW-lDDVis7jfSNYL_vjE";
-const genAI = new GoogleGenerativeAI(apiKey);
+
 
 // Get Generative Model
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash-latest",
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+var store = {};
+
+async function run(prompt) {
+    if (store[prompt]) return store[prompt];
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+    store[prompt] = text;
+    return text;
+}
+
+
+
+
+app.get('/', (req, res) => {
+    res.send('You are ON!');
 });
 
-// Generation Config
-const generationConfig = {
-  temperature: 1,
-  topP: 0.95,
-  topK: 64,
-  maxOutputTokens: 8192,
-  responseMimeType: "text/plain",
-};
+app.get('/cq', async (req, res) => {
 
-// Safety Settings
-const safetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-  },
-];
+    const prompt = req.query.prompt;
 
-// Middleware
-app.use(bodyParser.json());
+    if (!prompt) {
+        return res.status(400).send({ error: 'No prompt provided' });
+    }
 
-// POST route
-app.get("/generate", async (req, res) => {
-  try {
-    const query = req.query.query;
-
-    // Start chat session
-    const chatSession = model.startChat({
-      generationConfig,
-      safetySettings,
-      history: [
-        {
-          role: "user",
-          parts: [{ text: query }],
-        },
-      ],
-    });
-
-    // Send message
-    const result = await chatSession.sendMessage("INSERT_INPUT_HERE");
-
-    // Send response
-    res.send(result.response.text());
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).send("Internal Server Error");
-  }
+    try {
+        const geminiResponse = await run(prompt);
+        res.send(geminiResponse);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: 'An error occurred while processing your request' });
+    }
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(3000, () => {
+    console.log('Server is running on port 3000');
 });
